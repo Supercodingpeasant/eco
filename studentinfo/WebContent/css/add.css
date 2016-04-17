@@ -1,0 +1,23 @@
+#form1{
+	margin:50px 200px;
+}
+#form1 table{
+	text-align:left;
+}
+#form1 td{
+	height:30px;
+}
+.text1{
+	text-align:right;
+	font-size:20px;
+}
+input{
+	height:20px;
+}
+.radioinput{
+	margin:5px;
+}
+.btn{
+	width:60px;
+	margin-top:20px;
+}

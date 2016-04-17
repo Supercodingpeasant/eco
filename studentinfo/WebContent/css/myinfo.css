@@ -1,0 +1,37 @@
+*{
+	margin:0px;
+	padding:0px;
+}
+#font{
+	color:#1874CD;
+	margin-top:20px;
+	margin-left:10px;
+}
+#right_menu{
+	position:absolute;
+	left:130px;
+	top:170px;
+}
+#iul{
+	list-style:none;
+}
+.cli{
+	float:left;
+}
+a:hover,a:active{
+	background-color:#1874CD;
+	color:white;
+}
+#line{
+	position:relative;
+	top:65px;
+}
+#table{
+	position:relative;
+	top:75px;
+}
+td{
+	height:50px;
+	text-align:center;
+	border:1px solid #E0FFFF;
+}
