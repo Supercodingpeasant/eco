@@ -1,0 +1,255 @@
+一，拦截器
+	1.什么是拦截器(interceptor)
+		拦截器是strut2框架的中提供的一种java类。
+		作用:
+			1.可以拦截访问action的请求
+			2.给这个action加入新的丰富功能(上传、参数自动接收、类型自动转换等等)
+		需要配置之后,指明哪一个拦截器去拦截哪一个action或者哪一些action,这样这个拦截器才会去拦截我们的这个action,每一个拦截器就可以给我们的action加入一个新的功能.
+   
+	2.拦截器(interceptor)如何工作的
+      a.有一个拦截器的类(struts2框架自带的或者我们自己定义的一个类)
+      b.在配置文件中把这个拦截器类配置出来.
+      c.指明这个拦截器要拦截哪一个或者哪一些action.
+      d.客户端发送一个请求访问一个被拦截器拦截的action
+      e.这个请求会先被struts2的filter所拦截,filter会先检查这个请求是不是请求的action,如果是action的话,那么会再检查这个action有没有被定义的拦截器所拦截,有如果那么就把这个请求交给拦截器去处理.
+
+	3.如何自定义一个拦截器
+		struts2框架已经写好了很多个拦截器(在struts2的核心jar包),同时也把这些拦截器配置在配置文件里面(在struts-default.xml中).除此以外,我们还能写自己的的拦截器。
+      
+		要写一个拦截器,首先要实现一个接口:com.opensymphony.xwork2.interceptor.Interceptor或者提供继承一个抽象类 AbstractInterceptor
+      
+		例如:
+		public class MyInterceptor implements Interceptor{
+			public void destroy() {
+				System.out.println("in destory() of MyInterceptor");
+			}
+			public void init() {
+				System.out.println("in init() of MyInterceptor");
+			}
+		
+			//拦截到访问action的情况的时候调用这个方法
+			public String intercept(ActionInvocation ai) throws Exception {
+				System.out.println("before...");
+				//ai.invoke()其实就是帮我们去调用action中将要执行的方法,比如execute方法
+				//ai.invoke()的返回值其实就是action中方法执行完返回的字符串
+				String s = ai.invoke();
+				System.out.println("after...");
+				return "error";
+			}
+		}
+		然后再struts.xml文件中配置出这个拦截器类:
+		  <interceptors>
+			<interceptor name="myInterceptor" class="com.briup.web.interceptor.MyInterceptor"></interceptor>
+		  </interceptors>
+
+		最后指明这个拦截器在哪一个action中起作用:
+		  <action name="MyTest">
+			<result>/index.jsp</result>
+			<interceptor-ref name="myInterceptor"></interceptor-ref>
+		  </action>
+
+	4.拦截器栈
+		当前一个action需要被多个拦截器拦截的时候,正常情况下,我们需要在这个action中去引用要使用到的多个拦截器,但是我们可以使用一个拦截器栈去包含那几个拦截器,然后在action中直接引用这个拦截器栈就可以了。一个拦截器栈可以包含多个拦截器，一个拦截器栈还可以包含其他拦截器栈，定义拦截器或者拦截器栈都要在<interceptors>标签中
+		例如:
+		<interceptors>
+			<interceptor name="myInterceptor" class="com.briup.web.interceptor.MyInterceptor"></interceptor>
+				<interceptor-stack name="myStack">
+				<!-- 这是我们自己定义的一个拦截器 -->
+				<interceptor-ref name="myInterceptor"></interceptor-ref>
+				<!-- 这是struts-default.xml文件中定义的一个拦截器 -->
+				<interceptor-ref name="params"></interceptor-ref>
+				<!-- 这是struts-default.xml文件中定义的一个拦截器栈 -->
+				<interceptor-ref name="basicStack"></interceptor-ref>
+			</interceptor-stack>
+		</interceptors>
+
+	5.默认拦截器/拦截器栈
+		在一个package中,我们可以把一个拦截器或者拦截器栈声明为一个默认的拦截器/拦截器栈
+		作用:将来这个package中所有的action都会被这个默认的拦截器/拦截器栈所拦截。
+
+		例如:
+		myStack是一个拦截器或者拦截器栈
+		<default-interceptor-ref name="myStack"></default-interceptor-ref>
+
+		注意:
+		1)一般情况下,我们所写的任何action都会被一个叫做defaultStack的拦截器栈所拦截,这个拦截器栈中包含了十几个拦截器,这些拦截器给我们的action提供了很多丰富的功能.因为我们写所有的package都是直接或间接的继承了struts-default.xml，该文件中的一个名字叫struts-default的package,struts-default包中又把名字叫defaultStack的拦截器栈配置成了一个默认的拦截器栈,那么我们的package就把这个配置继承了过来,所有我们的action正常情况下都会被defaultStack所拦截但是如果我们一旦指明了某一个action被我们所写的一个拦截器/拦截器栈所拦截,那么这个action就不会被defaultStack拦截了。所以我们可以在action中主动的再声明这个action被defaultStack所拦截,或者把defaultStack加入到我们自定义的拦截器栈里面(拦截器栈可以包含拦截器栈)
+
+	6.package之间的继承
+		我们可以专门再定义一个package,在这个package里面我们只做拦截器/拦截器栈的定义:
+		<!-- 在这个package中,我们只定义拦截器/拦截器栈 -->
+		<package name="MyInter" extends="struts-default" namespace="/">
+
+		<interceptors>
+			<interceptor name="myInterceptor" class="com.briup.web.interceptor.MyInterceptor"></interceptor>
+
+			<interceptor-stack name="myStack">
+				<interceptor-ref name="myInterceptor"></interceptor-ref>
+				<!-- 这是struts-default.xml文件中定义的一个拦截器栈 -->
+				<interceptor-ref name="defaultStack"></interceptor-ref>
+			</interceptor-stack>
+		</interceptors>
+
+		<!-- 声明默认拦截器/拦截器栈 -->
+		<!-- 当前包中所有的action都会被这个myStack所拦截器 -->
+		<!-- 继承了当前包的其他包里面的所有action也会被这个myStack所拦截器 -->
+		<default-interceptor-ref name="myStack"></default-interceptor-ref>
+
+		</package>
+
+		然后我们可以让其他的package去继承我们这个MyInter包,这样一来,其他包中的action都会被我们这个MyInter包中的默认拦截器栈myStack所拦截了。 
+
+        注意:一定要保证action至少是被defaultStack这个拦截器栈所拦截的.
+
+    7.注意:在struts.xml中只定义出来一个拦截器,这个拦截器是不会被初始化和销毁的,在action中引用过以后才能让struts2框架帮我们去初始化这个拦截器,但是还是不能销毁,如果还想销毁的话,那么就要在一个拦截器栈中去引用一下这个拦截器才可以.
+
+    8.拦截器(interceptor)和过滤器(filter)的比较
+		相同点:
+			1.都是一种java类
+			2.都能拦截客户端发给服务器端的请求
+			3.拦截到请求之后都可以做一些相应的处理,最后还可以把这个请求放行.
+			4.都需要实现各自相应的接口以及在相应的配置文件中配置.
+		不同点:
+			1.拦截器(interceptor)是struts2框架中的定义的,
+				过滤器(filter)是web里面的对象,是J2EE标准里面定义的.
+			2.拦截器(interceptor)只会拦截器访问action的请求,
+				过滤器(filter)能够拦截所有请求.
+			3.拦截器(interceptor)定义在struts.xml文件中,过滤器(filter)定义在web.xml文件中.
+			4.拦截器(interceptor)对象的创建、调用、销毁是struts2框架负责的,过滤器(filter)对象的创建、调用、销毁是服务器负责的.
+
+    我们自己定义的filter能不能拦截Struts2框架中的action
+      1.可以拦截
+      2.需要在web.xml文件中把我们自己的filter配置在struts2的filter的上面才可以.
+      因为web.xml文件中filter配置的先后顺序控制filter起作用的顺序,同时如果struts的filter先拦截到访问action的请求后,
+      不会把这个请求交给下面的filter,而是交给了他它内部的拦截器(interceptor)了,但是如果我们自己filter拦截到请求之后,
+      还是依然会交给下一个filter,也就是交给struts2的filter.
+
+
+二，文件上传
+    1.页面的form表单中设置表单的enctype属性
+		enctype属性的作用:设置表单提交数据时候对表单中数据的编码方式.
+        1) 表单的默认enctype的属性为:在发送前编码所有字符（默认）
+			enctype="application/x-www-form-urlencoded"
+		2)如果表单中需要上传文件或者图片的话需要设置为:不对字符编码。
+			enctype="multipart/form-data"
+		3)在发送之前将空格转换为 "+" 加号，但不对特殊字符编码。
+			enctype="text/plain" 	
+
+    2.在action中设置成员变量接收上传的文件/图片
+		<input type="file" name="image">
+		private File image;
+
+        如果上传框中的name属性值为: name="image"则action需要定义一个名字为image的成员变量,同时也可以再定义一个名字为imageFileName的成员变量,如果有需要还可以再定义一个名字为imageContentType的成员变量.
+
+		注意:
+			image变量是自动接收到的上传的文件.
+			imageFileName变量是文件的名字.
+            imageContentType变量是文件的类型.
+
+	    这个三个变量的命令特点是: xxx、xxxFileName、xxxContentType, 
+	    其实xxx是要和页面中上传框中的name属性值一样的.
+
+		private File image;
+		private String imageFileName;
+		//如果不需要可以不定义这个
+		private String imageContentType;
+
+    3.给action中的属性提供get/set方法
+
+
+    4.execute方法中的内容:
+		这个例子中的action里面File类型变量image就是action接收到的客户端传过来的文件.这个时候image就代表着客户端要上传的文件,image是内存中的一个对象.我们要做的就是把内存中代表客户端上传文件的image对象里面的文件数据,用一个io流读取再用另一个io流写到服务器中某一个位置并保持在硬盘中.
+
+		1):获得上传文件需要被保存到的位置(服务器中的一个绝对路径)
+			String realpath = ServletActionContext.getServletContext().getRealPath("/upLoad");
+		2):创建一个File类型的文件对象,表示要把上传文件内容保存到这个文件里面.
+			imageFileName是action中定义的成员变量,表示上传文件的名字.
+			File savefile = new File(realpath, imageFileName);
+		3):使用org.apache.commons.io包中的FileUtils类的静态方法copyFile把内存中表示客户端上传文件的image对象中的数据,写到另一个我们定义好的文件中.
+			FileUtils.copyFile(image, savefile);
+
+    5.struts.xml中的配置.
+		配置这个处理上传的action的时候,就像其他的action配置一样,只要保证struts-default包中定义的默认的拦截器栈defaultStack能够拦截到我们这个负责上的action就可以了.	因为defaultStack拦截器栈中有专门负责处理上传的拦截器(interceptor),这个拦截器的名字为:fileUpload
+
+		注意:默认情况下,我们所写的所有action都会被拦截器栈defaultStack所拦截的.
+
+    6.可以设置上传文件的maxSize
+		<!-- 设置上传文件的maxSize  默认是2M = 1024*1024*2=2097152 -->
+		<!-- 注意这个属性value=""中只能写一个数字,而不能是一个运算式子 -->
+		<constant name="struts.multipart.maxSize" value="2097152"></constant>
+
+
+    7.注意:
+        1.文件上传后,在服务器所存放的位置路径要真实存在,不能自己随便定义一个不存在的路径
+		2.文件上传成功之后,我们可以在tomcat服务器中部署的项目中的指定的上传目录中看到上传的文件,但是在MyEclipse/Eclipse中或者在工作空间的项目中是看不到这个上传文件的,因为文件时上传到服务器中的项目里面了.
+
+
+
+三，struts2框架的国际化配置(i18n)
+	internationalization
+	作用:不同国家或者地区的人访问我们这个同一个web项目,在页面中显示的文字符文等内容是不同的,是和当前国家或者地区保持一致的。
+
+	1.配置俩个资源文件
+     例如:
+     xxxx_zh.properties
+     xxxx_en.properties
+     
+     例如:xxxx随便起的名字比如可以为message
+	2.这个俩个文本放在src下面
+
+	3.文件内容:
+      message_en.properties文件,这个文件当中存放的是将来页面中要显示的英文信息。
+      message_zh.properties文件,这个文件当中存放的是将来页面中要显示的中文信息。
+
+      例如:message_en.properties文件内容:
+      name=UserName
+      pwd=PassWord
+
+      注:name是key,UserName是value值,name是在页面中使用的,value值是要最终显示在页面的内容,也就是说,我们在页面中通过key来拿到相对于的value来进行显示.
+      
+      message_zh.properties文件内容:
+      //这样写不行
+      name=用户名
+      pwd=密码
+
+      注: .properties文件中是不能直接写中文的.需要把中文转换为Unicode编码才可以.JDK中的命令 native2ascii 可以完成这个工作
+      要写成这样: 
+
+      name=\u7528\u6237\u540D
+      pwd=\u5BC6\u7801
+
+	4.在struts.xml文件中配置国际化的资源文件
+      message为资源文件的前缀:
+      message_en.properties
+      message_zh.properties
+
+      <constant name="struts.custom.i18n.resources" value="message"></constant>
+
+
+	5.在页面中使用struts2的标签通过key拿到资源文件中的value值进行显示
+      
+      页面中的代码:
+        
+	<s:text name="name"></s:text>: <input type="text" name="username" /><br>
+        <s:text name="pwd"></s:text>:  <input type="text" name="password" /><br>
+
+        注:<s:text name="">可以通过key拿到资源文件中的value值
+    
+	6.将来浏览器中到底是显示中文还是英文,要看浏览器中默认优先使用的是哪一种语言来显示的当前页面的内容.(我们自己可以设置这个语言)
+
+
+四 json与Struts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
